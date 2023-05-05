@@ -1,0 +1,10 @@
+secretGenerator:
+  - name: root-password
+    literals:
+      - password=1@2#3$
+  - name: user-password
+    literals:
+      - password=#3@2!1
+resources:
+  - mysql/deployment.yaml
+  - app/deployment.yaml

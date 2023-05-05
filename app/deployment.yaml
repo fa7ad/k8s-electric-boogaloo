@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-electric-api
+  labels:
+    app: app-electric-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-electric-api
+  template:
+    metadata:
+      labels:
+        app: app-electric-api
+    spec:
+      containers:
+        - name: app-electric-api
+          image: localhost:5000/electric-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DATABASE
+              value: mysql
+            - name: DATABASE_HOST
+              value: electric-api
+            - name: DATABASE_PORT
+              value: "3306"
+            - name: DATABASE_USER
+              value: electric-api
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: user-password
+                  key: password
+            - name: DATABASE_NAME
+              value: business-data
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-electric-api
+  labels:
+    app: app-electric-api
+spec:
+  selector:
+    app: app-electric-api
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  type: LoadBalancer

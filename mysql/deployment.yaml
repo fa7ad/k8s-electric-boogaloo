@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-volume
+  labels:
+    app: electric-api
+spec:
+  storageClassName: standard
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/tmp/data"
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  labels:
+    app: electric-api
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 500Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: electric-api
+  labels:
+    app: electric-api
+spec:
+  selector:
+    matchLabels:
+      app: electric-api
+      tier: mysql
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: electric-api
+        tier: mysql
+    spec:
+      containers:
+        - image: percona/percona-server:5.7
+          name: mysql
+          imagePullPolicy: "IfNotPresent"
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: root-password
+                  key: password
+            - name: MYSQL_USER
+              value: electric-api
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: user-password
+                  key: password
+            - name: MYSQL_DATABASE
+              value: business-data
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - mountPath: /var/lib/mysqlql/data
+              name: mysql-persistent-storage
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: electric-api
+  labels:
+    app: electric-api
+spec:
+  type: NodePort
+  ports:
+    - port: 3306
+  selector:
+    app: electric-api
+    tier: mysql
